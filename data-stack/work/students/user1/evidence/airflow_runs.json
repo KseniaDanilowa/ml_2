@@ -1,0 +1,184 @@
+[
+  {
+    "id": "manual__p7_baseline",
+    "state": "success",
+    "start": "2026-11-19T20:12:57.736560+00:00",
+    "end": "2026-11-19T20:13:44.446029+00:00",
+    "gate": {
+      "previous": null,
+      "threshold": null,
+      "candidate": 0.5605266073826237,
+      "promote": true
+    },
+    "tasks": [
+      {
+        "task_id": "load_raw",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:12:58.025157+00:00",
+        "end_date": "2026-11-19T20:12:58.849421+00:00"
+      },
+      {
+        "task_id": "train_DecisionTree",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:05.163759+00:00",
+        "end_date": "2026-11-19T20:13:13.730764+00:00"
+      },
+      {
+        "task_id": "train_ExtraTrees",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:05.247970+00:00",
+        "end_date": "2026-11-19T20:13:14.063201+00:00"
+      },
+      {
+        "task_id": "prepare",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:12:59.089622+00:00",
+        "end_date": "2026-11-19T20:13:03.888752+00:00"
+      },
+      {
+        "task_id": "select_best",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:32.419478+00:00",
+        "end_date": "2026-11-19T20:13:32.867531+00:00"
+      },
+      {
+        "task_id": "train_KNN",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:15.236718+00:00",
+        "end_date": "2026-11-19T20:13:21.916113+00:00"
+      },
+      {
+        "task_id": "train_LogisticRegression",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:15.272090+00:00",
+        "end_date": "2026-11-19T20:13:22.249894+00:00"
+      },
+      {
+        "task_id": "train_RandomForest",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:23.298338+00:00",
+        "end_date": "2026-11-19T20:13:31.353172+00:00"
+      },
+      {
+        "task_id": "top_risk",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:38.559634+00:00",
+        "end_date": "2026-11-19T20:13:44.007765+00:00"
+      },
+      {
+        "task_id": "quality_gate",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:33.427832+00:00",
+        "end_date": "2026-11-19T20:13:35.146851+00:00"
+      },
+      {
+        "task_id": "register_champion",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:13:35.618063+00:00",
+        "end_date": "2026-11-19T20:13:37.504557+00:00"
+      }
+    ]
+  },
+  {
+    "id": "manual__p7_0fdbb84482_01",
+    "state": "success",
+    "start": "2026-11-19T20:15:21.091323+00:00",
+    "end": "2026-11-19T20:16:37.216203+00:00",
+    "gate": {
+      "previous": 0.59127294155064,
+      "threshold": 0.60127294155064,
+      "candidate": 0.59127294155064,
+      "promote": false
+    },
+    "tasks": [
+      {
+        "task_id": "train_KNN",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:08.127825+00:00",
+        "end_date": "2026-11-19T20:16:15.754391+00:00"
+      },
+      {
+        "task_id": "train_DecisionTree",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:07.982210+00:00",
+        "end_date": "2026-11-19T20:16:15.999500+00:00"
+      },
+      {
+        "task_id": "train_ExtraTrees",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:17.063852+00:00",
+        "end_date": "2026-11-19T20:16:24.719098+00:00"
+      },
+      {
+        "task_id": "select_best",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:25.158022+00:00",
+        "end_date": "2026-11-19T20:16:25.490133+00:00"
+      },
+      {
+        "task_id": "quality_gate",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:26.246656+00:00",
+        "end_date": "2026-11-19T20:16:28.102088+00:00"
+      },
+      {
+        "task_id": "register_champion",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:28.476085+00:00",
+        "end_date": "2026-11-19T20:16:30.108409+00:00"
+      },
+      {
+        "task_id": "top_risk",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:16:31.261777+00:00",
+        "end_date": "2026-11-19T20:16:37.030170+00:00"
+      },
+      {
+        "task_id": "load_raw",
+        "state": "success",
+        "try_number": 2,
+        "start_date": "2026-11-19T20:15:52.724206+00:00",
+        "end_date": "2026-11-19T20:15:53.678735+00:00"
+      },
+      {
+        "task_id": "prepare",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:15:54.645045+00:00",
+        "end_date": "2026-11-19T20:15:57.354469+00:00"
+      },
+      {
+        "task_id": "train_LogisticRegression",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:15:58.003843+00:00",
+        "end_date": "2026-11-19T20:16:05.958535+00:00"
+      },
+      {
+        "task_id": "train_RandomForest",
+        "state": "success",
+        "try_number": 1,
+        "start_date": "2026-11-19T20:15:58.005790+00:00",
+        "end_date": "2026-11-19T20:16:06.523118+00:00"
+      }
+    ]
+  }
+]

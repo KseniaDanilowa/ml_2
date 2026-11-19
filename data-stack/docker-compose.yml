@@ -1,0 +1,196 @@
+name: data-stack
+
+# Локальная копия учебного сервера (10.162.1.86) для MacBook:
+# PostgreSQL + S3 (RustFS — как на сервере) + MLflow + Airflow + Jupyter.
+# Порты снаружи: Jupyter :8888 · Airflow :8080 · S3 :9000 · S3-консоль :9001 · MLflow :5001
+# (порт 5000 занят AirPlay Receiver в macOS, поэтому MLflow смотрит наружу через 5001)
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
+  environment: &airflow-common-env
+    OPENBLAS_NUM_THREADS: "1"
+    OMP_NUM_THREADS: "1"
+    AIRFLOW__CORE__PARALLELISM: "2"
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: "10"       # подхватывать новые DAG-и за ~10 секунд
+    AIRFLOW__WEBSERVER__SECRET_KEY: local-dev-secret
+    # REST API по логину/паролю (по умолчанию в 2.11 он закрыт)
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+    # логи задач — в S3, как на сервере (бакет airflow-logs)
+    AIRFLOW__LOGGING__REMOTE_LOGGING: "true"
+    AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: s3://airflow-logs
+    AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID: s3_local
+    # подключения, которые на сервере создаёт преподаватель.
+    # На сервере у каждого студента свой ключ; локально — общий user1.
+    AIRFLOW_CONN_S3_LOCAL: "aws://user1:12345678@/?endpoint_url=http%3A%2F%2Fs3%3A9000"
+    AIRFLOW_CONN_POSTGRES_MAIN: "postgresql://airflow:airflow@postgres:5432/postgres"
+    # пароль MLflow для DAG-ов из практикума 3 (на сервере — Airflow Variable)
+    AIRFLOW_VAR_USER1_MLFLOW_PASSWORD: "local"
+    # MLflow-клиент в задачах (на сервере задаётся так же глобально)
+    MLFLOW_TRACKING_URI: http://mlflow:5000
+    # артефакты MLflow (модели, графики) клиент кладёт в S3 сам — нужны ключи
+    MLFLOW_S3_ENDPOINT_URL: http://s3:9000
+    AWS_ACCESS_KEY_ID: user1
+    AWS_SECRET_ACCESS_KEY: "12345678"
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - airflow-logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+    s3-init:
+      condition: service_completed_successfully
+  restart: unless-stopped
+
+services:
+  # ---------- база для всего: Airflow, MLflow, данные студентов (postgres_main)
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  # ---------- S3-совместимое хранилище: RustFS, как на учебном сервере
+  s3:
+    image: rustfs/rustfs:1.0.6
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_ACCESS_KEY: user1          # локально один общий ключ (на сервере — user1..user30)
+      RUSTFS_SECRET_KEY: "12345678"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  # ---------- однократно: бакеты S3 (students, user1..user30 и служебные)
+  s3-init:
+    pull_policy: never
+    image: data-stack-mlflow:latest      # образ уже содержит boto3
+    environment:
+      S3_ENDPOINT: http://s3:9000
+      AWS_ACCESS_KEY_ID: user1
+      AWS_SECRET_ACCESS_KEY: "12345678"
+    volumes:
+      - ./s3-init:/init:ro
+    entrypoint: ["python", "/init/init.py"]
+    depends_on:
+      s3:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------- MLflow 3.16.1: метаданные в PostgreSQL, артефакты в S3
+  mlflow:
+    image: data-stack-mlflow:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    environment:
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
+      MLFLOW_S3_ENDPOINT_URL: http://s3:9000
+      AWS_ACCESS_KEY_ID: user1
+      AWS_SECRET_ACCESS_KEY: "12345678"
+    ports:
+      - "127.0.0.1:5001:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  # ---------- Airflow 2.11: инициализация базы и пользователя student
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: student
+      _AIRFLOW_WWW_USER_PASSWORD: student
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ---------- Jupyter: здесь работают ноутбуки 01/02/03
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter
+    command: start-notebook.py --IdentityProvider.token=
+    environment:
+      # адреса изнутри docker-сети — ноутбуки их читают сами
+      S3_ENDPOINT_URL: http://s3:9000
+      S3_PASSWORD: "12345678"          # пароль S3 для user1 — getpass не спросит
+      NB_MLFLOW_PASSWORD: local        # локальный MLflow без пароля — просто заглушка
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_S3_ENDPOINT_URL: http://s3:9000   # артефакты MLflow — сразу в S3
+      AWS_ACCESS_KEY_ID: user1
+      AWS_SECRET_ACCESS_KEY: "12345678"
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - ./work:/home/jovyan/work
+      - ./dags:/home/jovyan/work/dags   # та же папка, что читает Airflow
+    depends_on:
+      s3-init:
+        condition: service_completed_successfully
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  rustfs-data:
+  airflow-logs:
